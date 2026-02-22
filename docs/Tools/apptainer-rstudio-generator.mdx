@@ -1,0 +1,23 @@
+---
+id: apptainer-rstudio-generator
+title: Apptainer RStudio Generator
+sidebar_position: 2
+description: An interactive tool to generate Apptainer definition files for RStudio.
+hide_table_of_contents: true
+---
+
+import ApptainerRStudioGenerator from '@site/src/components/ApptainerRStudioGenerator';
+
+# Apptainer RStudio Generator
+
+Use this interactive tool to quickly draft Apptainer definition (`.def`) files for R+RStudio+foundation environments. 
+
+You can choose to build an image **From Scratch** using standard OS base images, or rapidly provision one **From Pre-build** utilizing existing specialized container images (such as extending an existing installation to inject custom packages).
+
+Expand and customize the segments on the left to safely compile your container definition step-by-step. 
+
+Once verified, click **Export Script** to download the `.def` snippet to your local filesystem. You can then use the `apptainer build` command on the HPC cluster safely!
+
+## Tool 
+
+<ApptainerRStudioGenerator />

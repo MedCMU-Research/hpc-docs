@@ -1,0 +1,19 @@
+---
+id: slurm-generator
+title: SLURM Script Generator
+sidebar_position: 1
+description: An interactive tool to generate SLURM job scripts.
+hide_table_of_contents: true
+---
+
+import SlurmGenerator from '@site/src/components/SlurmGenerator';
+
+# SLURM Script Generator
+
+Use this interactive tool to quickly draft SLURM scripts for the MedCMU-HPC cluster. You can customize standard variables like partitions, CPU counts, target GPU cards, and required memory, and the code snippet on the right will instantly update.
+
+If you are running **Array Jobs**, you can click the **Job Array** button to unlock additional parameters indicating your start slice, end slice, and max parallel active jobs limit. Once configuring your script logic, strictly press **Export Script** to download your personalized `.sbatch` script directly to your local computer.
+
+## Tool 
+
+<SlurmGenerator />

@@ -1,0 +1,8 @@
+{
+  "label": "Generators & Tools",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Interactive tools for generating scripts and configurations."
+  }
+}

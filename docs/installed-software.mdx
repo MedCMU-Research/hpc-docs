@@ -1,0 +1,56 @@
+---
+id: installed-software
+title: Installed Software & Environments
+sidebar_position: 6
+description: A comprehensive list of all installed software modules and micromamba environments on the HPC cluster.
+---
+
+import SoftwareTable from '@site/src/components/SoftwareTable';
+
+# Installed Software & Environments
+
+MedCMU-HPC provides a wide variety of pre-installed software delivered through **Environment Modules** and **Micromamba Environments**.
+
+You can search and filter the table below to find the specific software or tool you need.
+
+<SoftwareTable />
+
+## Loading Software
+
+### Environment Modules
+To use the software provided via environment modules, use the `module load` command. For example:
+```bash
+module load java-jdk/21.0.3+9
+```
+Or to see all available modules in your terminal:
+```bash
+module avail
+```
+
+**Executing Apptainer-based Modules (e.g., R)**
+Some modules, especially those for R, are packaged as Apptainer containers. Loading these modules pre-loads a `$SIF` environment variable that points to the container image path. You can easily access R using the following command:
+```bash
+# First, load the specific module
+module load r/4.5.1-RStudio_Server_2025.05.1-513
+
+# Second, execute R within the container via apptainer
+apptainer exec $SIF R
+```
+*Note: This `apptainer exec` command can also be directly executed inside your SLURM scripts!*
+
+### Micromamba Environments
+To use the software provided via Micromamba environments, you must first load `mamba` and then activate the environment:
+```bash
+# First, load mamba
+module load mamba
+
+# Second, activate the environment
+micromamba activate <environment_name>
+
+# Example:
+micromamba activate jupyter
+```
+To see all available Micromamba environments in your terminal:
+```bash
+micromamba env list
+```
