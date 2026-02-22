@@ -1,31 +1,71 @@
-# MedCMU HPC Documentation
+# MedCMU-HPC
 
-> Official documentation for the High-Performance Computing (HPC) infrastructure at the Faculty of Medicine, Chiang Mai University (MedCMU). This site provides guides on accessing the cluster, managing resources, using software modules, and submitting jobs via SLURM.
+> MedCMU-HPC is a High-Performance Computing (HPC) service provided by the Faculty of Medicine, Chiang Mai University (CMU), Thailand. It is dedicated to providing cutting-edge computing resources for medical and health science research, including bioinformatics, computational biology, and deep learning workloads.
 
-## General
-- [Introduction](docs/intro): Overview of the MedCMU HPC services and infrastructure.
-- [Rules and Guidelines](docs/Rules%20and%20Guidelines): Usage policies, data privacy rules, and community guidelines.
+## Overview
 
-## Documentation (Technical Guides)
-- [Apptainer Containers](docs/Documentation/apptainer): Guide to using Apptainer for containerized workloads.
-- [Connect Server](docs/Documentation/connect-server): Instructions for connecting to the HPC cluster via SSH.
-- [Data Transfer](docs/Documentation/data-transfer): How to transfer files to and from the HPC system.
-- [Environment Modules](docs/Documentation/environment-modules): Managing software environments using Lmod.
-- [First Apptainer Container](docs/Documentation/first-apptainer-container): A step-by-step tutorial for your first container job.
-- [Jupyter Lab](docs/Documentation/jupyter): Running Jupyter Lab sessions on the cluster.
-- [Parabricks Netflow](docs/Documentation/parabricks-netflow): using NVIDIA Parabricks for genomics analysis.
-- [RStudio](docs/Documentation/rstudio): Accessing RStudio Server on the HPC.
-- [Slurm Job Submission](docs/Documentation/use-slurm): Comprehensive guide to the SLURM workload manager.
-- [Unix Commands](docs/Documentation/unix-command): Essential Linux commands for HPC users.
-- [Variant Effect Predictor (VEP)](docs/Documentation/vep): Running VEP for variant annotation.
-- [Virtual Environments](docs/Documentation/virtaul-env): Creating and managing Python virtual environments.
-- [Virtual Machine Screen](docs/Documentation/virutal-screen): Using `screen` or `tmux` for persistent sessions.
-- [Open OnDemand](docs/Documentation/OnDemand): accessing the HPC via the web-based Open OnDemand portal.
+MedCMU-HPC offers researchers access to a state-of-the-art HPC cluster, high-performance storage, and a wide range of pre-installed scientific software and containerized environments. The platform is designed to support demanding research workflows in medical and health sciences.
 
-## Standard Operating Procedures (SOP)
-- [Account Creation](docs/SOP/User/account-creation): Steps for new users to request an HPC account.
-- [Request Resources](docs/SOP/User/request-resources): Procedure for requesting compute resources and storage.
-- [Job Submission](docs/SOP/User/job-submission): Standard operating procedure for submitting and monitoring jobs.
-- [Software Access](docs/SOP/User/software-access): How to request new software installations.
-- [Data Management](docs/SOP/User/data-management): Guidelines for data storage, backup, and deletion.
-- [Getting Assistance](docs/SOP/User/getting-assistance): Channels for technical support and help.
+## Key Features
+
+- **HPC Cluster**: A powerful research computing cluster designed for bioinformatics, medical research, and computational biology workloads.
+- **High-Performance Storage**: Secure and scalable storage with dedicated project and scratch file storage, optimized for large dataset access.
+- **Software Ecosystem**: Comprehensive pre-installed software including bioinformatics tools and deep learning frameworks, plus containerized environments for reproducible workflows.
+
+## Documentation
+
+- [Getting Started with HPC](https://medcmu-hpc.netlify.app/docs/intro)
+- [Connect to HPC](https://medcmu-hpc.netlify.app/docs/Documentation/connect-server)
+- [Transfer Files with HPC](https://medcmu-hpc.netlify.app/docs/Documentation/data-transfer)
+- [Basic Unix/Linux Commands](https://medcmu-hpc.netlify.app/docs/Documentation/unix-command#basic-command)
+- [Use Environment Modules](https://medcmu-hpc.netlify.app/docs/Documentation/environment-modules)
+- [Virtual Environments](https://medcmu-hpc.netlify.app/docs/Documentation/virtaul-env)
+- [Use Virtual Terminal (Screen)](https://medcmu-hpc.netlify.app/docs/Documentation/virutal-screen)
+
+## Access & Registration
+
+- [User Registration](https://cmu.to/medcmu-hpc-user-register)
+- [Project Registration](https://cmu.to/medcmu-hpc-proj-register)
+- [Change Request](http://cmu.to/medcmu-hpc-change-req)
+- [Project Closure](https://cmu.to/medcmu-hpc-closure)
+
+## Resources
+
+- [Resources Overview](https://medcmu-hpc.netlify.app/resources)
+- [Service Fee / Credit Calculator](https://medcmu-hpc.netlify.app/credit-calculator)
+- [Blog](https://medcmu-hpc.netlify.app/blog)
+- [Contact HPC Support](https://medcmu-hpc.netlify.app/contact-hpc-support)
+
+## HPC Resources
+
+MedCMU-HPC provides one open cluster for research staff and graduate students of the Faculty of Medicine, named **Raptor**. It became operational in November 2024 and consists of Dell compute servers powered by AMD CPUs.
+
+### Raptor Cluster Partitions (SLURM)
+
+| Partition | Total Cores | Cores per Node | Memory per Node | GPU per Node    | Max Time per Job | Max Cores per User |
+|-----------|-------------|----------------|-----------------|-----------------|------------------|--------------------|
+| compute   | 384         | 96             | 1,280 GB        | -               | 7 days           | 188 (Recommend max 94/node)* |
+| gpu       | 192         | 96             | 384 GB          | 2x Nvidia H100  | 7 days           | 188 (Recommend max 94/node)* |
+| short     | 6           | 1              | 4 GB            | -               | 8 hours          | 2                  |
+
+*Note: It is recommended to use a maximum of 94 cores per node to reserve 2 cores for the operating system and general short jobs, ensuring fair use and system stability.*
+
+- **short**: For short batch jobs, interactive jobs, array jobs, and multi-threaded jobs. Default memory is 4 GB per core.
+- **compute**: For larger multi-node and long-running jobs.
+- **gpu**: For GPU-intensive jobs.
+
+### Hardware Specifications
+
+| Node Type     | Number of Nodes | CPU per Node                    | Memory per Node | Cores per Node | GPU             |
+|---------------|-----------------|---------------------------------|-----------------|----------------|-----------------|
+| Compute Nodes | 4               | 2x AMD EPYC 9454 @ 2.75GHz     | 1,280 GB        | 96             | -               |
+| GPU Nodes     | 2               | 2x AMD EPYC 9454 @ 2.75GHz     | 384 GB          | 96             | 2x Nvidia H100  |
+
+Each node includes local SSD storage and runs Rocky Linux 8.10 with Linux kernel version 4.18.0.
+
+- [Resources page](https://medcmu-hpc.netlify.app/resources)
+
+## Organization
+
+Faculty of Medicine, Chiang Mai University, Thailand
+Website: [https://medcmu-hpc.netlify.app](https://medcmu-hpc.netlify.app)
