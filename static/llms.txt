@@ -22,6 +22,11 @@ Aspera-CLI/3.9.6.1467.159c5b1, PCRE2/10.42-GCCcore-13.2.0, help2man/1.49.3-GCCco
 ### Micromamba Environments
 GCparagon, MetaboAnalyst, MuPeXI, SqueezeMeta, abricate, annotsv, anvio-8, buildtest, cellbender, cellbender_v0.3.2, checkM, chewbbaca, circos, cnvkit, cobrapy, cpc2, crossmap_v0.7.3, deTiN, diffusers, dna_meth, ecole, ecole_cuda, emu-3.5.5, eye, feelnc, goatools, gtdbtk-2.5.2, hatchet, ichorCNA, igv-notebook, igv-reports, iqtree, isoseq, jupyter, maaslin2, marimo, maxbin2, mlst, nf-core, ollama, panaroo, picrust2, piggy, plek2, prokka, pytorch-v2.8.1, qiime2-amplicon-2024.10, qiime2-amplicon-2024.2, qiime2-amplicon-2025.7, r-ichorcna, raxml-ng, rosetta, s-tui, scons, snippy, sqanti3, talon, tama, varscan, vcf2maf, workshop_rared
 
+## Useful Commands
+
+- `sbalance`: Use this command to check your current Service Node Hours (SHr) credit balance.
+- `myquota`: Use this command to check your project storage quota and disk usage.
+
 ## Documentation
 
 - [Getting Started with HPC](https://medcmu-hpc.netlify.app/docs/intro)
@@ -37,6 +42,7 @@ GCparagon, MetaboAnalyst, MuPeXI, SqueezeMeta, abricate, annotsv, anvio-8, build
 
 - [SLURM Script Generator](https://medcmu-hpc.netlify.app/docs/Tools/slurm-generator)
 - [Apptainer RStudio Generator](https://medcmu-hpc.netlify.app/docs/Tools/apptainer-rstudio-generator)
+- [Interactive Linux CLI Tutorial](https://medcmu-hpc.netlify.app/docs/Tools/interactive-cli-tutorial)
 
 ## Access & Registration
 

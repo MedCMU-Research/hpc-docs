@@ -23,62 +23,88 @@ Key sections of the documentation include:
 - **Versioned Documentation**: Keep track of different versions of the documentation and update it as the infrastructure and tools evolve.
 - **Searchable Content**: Quickly find information with the built-in search functionality.
 
-## Installation
+## Local Development
 
 To contribute or run the MedCMU HPC documentation locally, follow these steps:
 
 ### Prerequisites
 
-- Node.js >=16.6.0
+- Node.js >= 18.0.0
 - NPM
+- Python 3 (For parsing software documentation)
 
-### Installation Steps
+### 1. Installation
 
-1. Clone the repository:
+Clone the repository and install the standard Docusaurus dependencies:
 
+```bash
+git clone https://github.com/evolu-tion/medcmu-hpc.git
+cd medcmu-hpc
+npm install
+```
+
+### 2. Updating Software Tables
+
+The **Installed Software & Environments** list is dynamically generated via a Python script. If you need to add or remove software from the cluster's manifest:
+
+1. Update `software_summary.txt`.
+2. Run the parser:
    ```bash
-   git clone https://github.com/evolu-tion/medcmu-hpc.git
-   cd medcmu-hpc
+   python3 parse_software.py
    ```
+   This will automatically re-build `src/components/SoftwareData.js` allowing the React data-table to update universally.
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the local development server:
-   ```bash
-   npm run start
-   ```
-4. Open your browser and visit `http://localhost:3000` to view the documentation.
+### 3. Start Development Server
 
-### Build the Site
+You can launch a hot-reloading development server utilizing either your local Node.js environment or isolated inside Docker.
 
-### Build the Site
+**Option A: Local Node.js**
 
-To build a static version of the site for deployment, run:
+```bash
+npm run start
+```
+
+**Option B: Docker Compose (Isolated Dev Environment)**
+Your `docker-compose.yml` includes an `hpc-docs-dev` service explicitly configured for isolated hot-reloading. You can spin it up with:
+
+```bash
+docker compose up hpc-docs-dev
+```
+
+Regardless of which option you pick, the site will instantly become accessible at `http://localhost:3000`.
+
+---
+
+## Production Deployment
+
+### Building for Production
+
+To build a static, highly-optimized version of the site for server deployment, run:
 
 ```bash
 npm run build
 ```
 
-## Running with Docker
+This command compiles all `.mdx` documents and React components (e.g., `<SlurmGenerator />` and `<ApptainerRStudioGenerator />`) into the `build/` directory.
 
-You can also run the documentation locally using Docker Compose. This helps verify the production build in a containerized environment.
+### Running with Docker (Staging)
 
-1. Build and start the container:
+You can test the exact production state by running the provided Docker Compose configuration:
 
-   > **Note:** Use the `--build` flag to ensure any changes are included in the image.
+```bash
+# Build and start the container
+docker compose up -d --build
+```
 
-   ```bash
-   docker compose up -d --build
-   ```
+Access the staged static production site at `http://localhost:8080`.
 
-2. Access the site at `http://localhost:8080`.
+To stop the container:
 
-3. To stop the container:
-   ```bash
-   docker compose down
-   ```
+```bash
+docker compose down
+```
+
+---
 
 ## LLM Context
 
