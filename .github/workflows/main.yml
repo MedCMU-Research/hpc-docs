@@ -39,7 +39,7 @@ jobs:
     steps:
       # Fix Docusaurus cache permission issue before checkout
       - name: Clean Docusaurus cache
-        run: sudo rm -rf .docusaurus || true
+        run: rm -rf .docusaurus || true
 
       - uses: actions/checkout@v3
 

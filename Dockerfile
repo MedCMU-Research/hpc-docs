@@ -1,18 +1,24 @@
 # Stage 1: Build the Docusaurus site
 FROM node:22-alpine AS builder
 
+# Create app directory and set correct permissions for node user
+RUN mkdir -p /app && chown -R node:node /app
+
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Switch to the non-root node user
+USER node
 
-# Install dependencies
+# Copy package files ensuring correct ownership
+COPY --chown=node:node package*.json ./
+
+# Install dependencies (running as node user)
 RUN npm ci
 
-# Copy source files
-COPY . .
+# Copy remaining source files with node ownership
+COPY --chown=node:node . .
 
-# Build the static site
+# Build the static site (this prevents root-owned files from leaking into host if volume mapped)
 RUN npm run build
 
 # Stage 2: Serve with nginx
