@@ -9,7 +9,13 @@ const lessons = [
       { instruction: "Change directory to demo", expected: ["cd demo"], output: "" },
       { instruction: "Make a file name metadata.txt", expected: ["touch metadata.txt"], output: "" },
       { instruction: "Copy file metadata.txt to sample.txt", expected: ["cp metadata.txt sample.txt"], output: "" },
-      { instruction: "List directory contents", expected: ["ls", "ls -l", "ll", "ls -la", "ls -lah", "ls -al"], output: "metadata.txt  sample.txt" },
+      { 
+        instruction: "List directory contents", 
+        expected: ["ls", "ls -l", "ll", "ls -la", "ls -lah", "ls -al"], 
+        output: (cmd) => (cmd.includes("l") || cmd.includes("a")) 
+          ? "total 8\ndrwxr-xr-x 2 user group 4096 Oct 10 10:00 .\ndrwxr-xr-x 3 user group 4096 Oct 10 09:59 ..\n-rw-r--r-- 1 user group    0 Oct 10 10:00 metadata.txt\n-rw-r--r-- 1 user group    0 Oct 10 10:00 sample.txt" 
+          : "metadata.txt  sample.txt" 
+      },
       { instruction: "Remove file name metadata.txt", expected: ["rm metadata.txt"], output: "" },
       { instruction: "Check your path working directory", expected: ["pwd"], output: "/home/user/demo" },
       { instruction: "Go to home directory", expected: ["cd ..", "cd", "cd ~"], output: "" },
@@ -36,6 +42,45 @@ const lessons = [
     ]
   }
 ];
+
+const getFileSystemState = (lessonId, currentStep, completed) => {
+  if (completed) return { root: [] };
+  if (lessonId === 1) {
+    if (currentStep === 0) return { root: [] };
+    if (currentStep === 1 || currentStep === 2) return { root: [{ name: "demo", type: "dir", children: [] }] };
+    if (currentStep === 3) return { root: [{ name: "demo", type: "dir", children: [{ name: "metadata.txt", type: "file" }] }] };
+    if (currentStep === 4 || currentStep === 5) return { root: [{ name: "demo", type: "dir", children: [{ name: "metadata.txt", type: "file" }, { name: "sample.txt", type: "file" }] }] };
+    if (currentStep >= 6 && currentStep <= 8) return { root: [{ name: "demo", type: "dir", children: [{ name: "sample.txt", type: "file" }] }] };
+  } else if (lessonId === 2) {
+    if (currentStep === 0) return { root: [] };
+    if (currentStep === 1 || currentStep === 2) return { root: [{ name: "demo", type: "dir", children: [] }] };
+    if (currentStep >= 3 && currentStep <= 6) return { root: [{ name: "demo", type: "dir", children: [{ name: "seq.fasta", type: "file" }] }] };
+    if (currentStep === 7 || currentStep === 8) return { root: [{ name: "demo", type: "dir", children: [] }, { name: "seq.fasta", type: "file" }] };
+  }
+  return { root: [] };
+};
+
+const FileTree = ({ nodes, level = 0 }) => {
+  if (!nodes || nodes.length === 0) {
+    if (level === 0) return <div style={{ color: "var(--ifm-color-emphasis-500)", fontStyle: "italic", paddingLeft: "10px", marginTop: "5px" }}>(empty directory)</div>;
+    return null;
+  }
+  return (
+    <div style={{ paddingLeft: level > 0 ? "20px" : "10px", marginTop: "5px" }}>
+      {nodes.map((node, i) => (
+        <div key={i}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "4px 0", fontSize: "14px" }}>
+            {node.type === "dir" ? "📁" : "📄"} 
+            <span style={{ fontWeight: node.type === "dir" ? "bold" : "normal", color: node.type === "dir" ? "var(--ifm-color-primary)" : "var(--ifm-font-color-base)" }}>
+              {node.name}
+            </span>
+          </div>
+          {node.type === "dir" && <FileTree nodes={node.children} level={level + 1} />}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export default function InteractiveCli() {
   const [activeLesson, setActiveLesson] = useState(0);
@@ -111,7 +156,7 @@ export default function InteractiveCli() {
 
     if (e.key === "Enter") {
       const command = inputVal.trim();
-      let newHistory = [...history, { type: "input", text: command }];
+      let newHistory = [...history, { type: "input", text: command, prompt: prompt }];
       
       if (command === "") {
         setHistory(newHistory);
@@ -126,7 +171,8 @@ export default function InteractiveCli() {
       if (!completed && stepData.expected.some(exp => command === exp || command.replace(/\s+/g, ' ') === exp)) {
         // Success
         if (stepData.output) {
-          newHistory.push({ type: "output", text: stepData.output });
+          const outText = typeof stepData.output === "function" ? stepData.output(command) : stepData.output;
+          newHistory.push({ type: "output", text: outText });
         }
         newHistory.push({ type: "success", text: "✓ Correct!" });
         
@@ -158,8 +204,8 @@ export default function InteractiveCli() {
     setCompleted(false);
   };
 
-  const currentPath = currentStep >= 1 && currentStep <= 7 && activeLesson === 0 ? "~/demo" : "~";
-  const prompt = `user@medcmu-hpc:${activeLesson === 1 && currentStep >= 1 && currentStep <= 6 ? "~/demo" : currentPath}$`;
+  const promptPath = (currentStep >= 2 && currentStep <= 7) ? "~/demo" : "~";
+  const prompt = `user@medcmu-hpc:${promptPath}$`;
 
   return (
     <div style={{ padding: "20px 0", maxWidth: "1000px" }} onClick={(e) => e.stopPropagation()}>
@@ -209,6 +255,16 @@ export default function InteractiveCli() {
               <div style={{ height: "100%", width: `${(completed ? 100 : (currentStep / lesson.steps.length) * 100)}%`, background: "var(--ifm-color-primary)", transition: "width 0.3s" }}></div>
             </div>
           </div>
+
+          <div style={{ marginTop: "30px" }}>
+            <h4>Virtual File System</h4>
+            <div style={{ background: "var(--ifm-color-emphasis-100)", padding: "15px", borderRadius: "8px", minHeight: "100px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
+                🏠 ~ (Home Directory)
+              </div>
+              <FileTree nodes={getFileSystemState(lesson.id, currentStep, completed).root} />
+            </div>
+          </div>
         </div>
 
         {/* RIGHT PANEL: TERMINAL */}
@@ -224,7 +280,7 @@ export default function InteractiveCli() {
               <div key={i} style={{ marginBottom: "8px" }}>
                 {line.type === "input" && (
                   <div>
-                    <span style={{ color: "#98c379" }}>{prompt}</span> <span style={{ color: "#e5c07b" }}>{line.text}</span>
+                    <span style={{ color: "#98c379" }}>{line.prompt || prompt}</span> <span style={{ color: "#e5c07b" }}>{line.text}</span>
                   </div>
                 )}
                 {line.type === "output" && (

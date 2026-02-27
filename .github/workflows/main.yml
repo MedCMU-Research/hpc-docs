@@ -37,6 +37,10 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      # Fix Docusaurus cache permission issue before checkout
+      - name: Clean Docusaurus cache
+        run: sudo rm -rf .docusaurus || true
+
       - uses: actions/checkout@v3
 
       - name: Build and Deploy with Docker Compose
