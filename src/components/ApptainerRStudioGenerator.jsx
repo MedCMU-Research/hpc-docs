@@ -1,25 +1,24 @@
 import React, { useState } from "react";
 import CodeBlock from '@theme/CodeBlock';
 
-const SCRATCH_ENV = `export TZ="Asia/Bangkok"
-export LANG="en_US.UTF-8"
-export LC_COLLATE="en_US.UTF-8"
-export LC_CTYPE="en_US.UTF-8"
-export LC_MESSAGES="en_US.UTF-8"
-export LC_MONETARY="en_US.UTF-8"
-export LC_NUMERIC="en_US.UTF-8"
-export LC_TIME="en_US.UTF-8"
-export LC_ALL="en_US.UTF-8"
-export CPATH=$CPATH:/usr/include/openmpi-x86_64
-export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-export PATH=/usr/lib/rstudio-server/bin:\${PATH}`;
+const SCRATCH_ENV = `    export TZ="Asia/Bangkok"
+    export LANG="en_US.UTF-8"
+    export LC_ALL="en_US.UTF-8"
+    export PATH="/usr/lib/rstudio-server/bin:\${PATH}"
+    export LD_LIBRARY_PATH="/usr/local/lib:\${LD_LIBRARY_PATH}"`;
 
-const SHARED_TEST = `command -v R &>/dev/null || exit 1
-command -v rstudio-server &>/dev/null || exit 2
-command -v rserver &>/dev/null || exit 3`;
+const PREBUILD_ENV = `    export TZ="Asia/Bangkok"
+    export LANG="en_US.UTF-8"
+    export LC_ALL="en_US.UTF-8"
+    export PATH="/usr/lib/rstudio-server/bin:\${PATH}"
+    export LD_LIBRARY_PATH="/usr/local/lib:\${LD_LIBRARY_PATH}"`;
 
-const SHARED_RUN = `exec "$@"`;
+const SHARED_TEST = `    command -v R       || exit 1
+    command -v rserver || exit 2
+    R --version | head -1
+    R -e "BiocManager::version()"`;
+
+const SHARED_RUN = `    exec "$@"`;
 
 export default function ApptainerRStudioGenerator() {
   const [tab, setTab] = useState("scratch");
@@ -30,23 +29,27 @@ export default function ApptainerRStudioGenerator() {
     from: "quay.io/rockylinux/rockylinux:8.10",
     environment: SCRATCH_ENV,
     rVersion: "4.5.2",
-    rstudioVersion: "2026.01.1+403",
+    biocVersion: "3.22",
+    rstudioVersion: "2026.01.1-403",
     dnfPackages: [],
     cranPackages: ["tidyverse", "rmarkdown", "knitr", "devtools"],
     biocPackages: [],
+    installBiocManager: true,
     runscript: SHARED_RUN,
     test: SHARED_TEST,
   });
 
   const [prebuildData, setPrebuildData] = useState({
     bootstrap: "localimage",
-    from: "/apps/r/sif/4.5.2-RStudio_Server_2025.09.2-418.sif",
-    environment: SCRATCH_ENV,
-    rVersion: "", 
-    rstudioVersion: "", 
+    from: "/apps/r/sif/4.5.2-RStudio_Server_2026.01.1-403.sif",
+    environment: PREBUILD_ENV,
+    rVersion: "",
+    biocVersion: "",
+    rstudioVersion: "",
     dnfPackages: [],
     cranPackages: ["tidyverse"],
     biocPackages: ["DESeq2"],
+    installBiocManager: false,
     runscript: SHARED_RUN,
     test: SHARED_TEST,
   });
@@ -55,8 +58,8 @@ export default function ApptainerRStudioGenerator() {
   const setActiveData = tab === "scratch" ? setScratchData : setPrebuildData;
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setActiveData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setActiveData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
   const handlePackageChange = (type, index, value) => {
@@ -80,63 +83,78 @@ export default function ApptainerRStudioGenerator() {
   };
 
   const generatePost = () => {
+    const R_VERSION = activeData.rVersion;
+    const BIOC_VERSION = activeData.biocVersion;
+    const RSTUDIO_VERSION = activeData.rstudioVersion;
+    const rMajorMinor = (R_VERSION || "4.5").split(".").slice(0, 2).join(".");
+
     let post = "";
-    
+
     // Scratch needs the full R + OS installation
     if (tab === "scratch") {
-      post += `# Setup Environment and Fix Locale
-dnf install -y langpacks-en glibc-langpack-en glibc-locale-source glibc-common
-localedef --quiet -v -c -i en_US -f UTF-8 en_US.UTF-8 || if [ $? -ne 1 ]; then exit $?; fi
+      post += `    set -euo pipefail
 
-# Install EPEL
-dnf install -y epel-release
+    R_VERSION=${R_VERSION}
+    BIOC_VERSION=${BIOC_VERSION}
+    RSTUDIO_VERSION=${RSTUDIO_VERSION}
+    R_ETC=/opt/R/\${R_VERSION}/lib/R/etc
+    PPM=https://packagemanager.posit.co
 
-# Enable Additional Built-In Repos
-dnf config-manager --set-enabled powertools
+    # ── Locale ────────────────────────────────
+    dnf install -y langpacks-en glibc-langpack-en glibc-locale-source
+    localedef -c -i en_US -f UTF-8 en_US.UTF-8 || true
 
-# Upgrade Packages
-dnf upgrade -y
+    # ── Repos & base upgrade ──────────────────
+    dnf install -y epel-release
+    dnf config-manager --set-enabled powertools
+    dnf upgrade -y
 
-# Install Dev Tools
-dnf groupinstall -y --with-optional "Development Tools" "Scientific Support"
-dnf install -y wget ca-certificates mariadb-connector-c-devel curl-devel openssl-devel llvm llvm-devel llvm-static llvm-toolset libxml2-devel
-echo "/usr/lib64/openmpi/lib" > /etc/ld.so.conf.d/openmpi.conf
-ldconfig
+    # ── Build tools & R dependencies ──────────
+    dnf groupinstall -y "Development Tools"
+    dnf install -y \\
+        wget curl ca-certificates \\
+        openssl-devel \\
+        libxml2-devel \\
+        libcurl-devel \\
+        zlib-devel \\
+        bzip2-devel \\
+        java-11-openjdk-devel
 
-# Install R (https://docs.rstudio.com/resources/install-r/)
-R_VERSION=${activeData.rVersion}
-curl -O https://cdn.rstudio.com/r/centos-8/pkgs/R-\${R_VERSION}-1-1.x86_64.rpm
-dnf install -y R-\${R_VERSION}-1-1.x86_64.rpm
-rm -f R-\${R_VERSION}-1-1.x86_64.rpm
-ln -s /opt/R/\${R_VERSION}/bin/R /usr/local/bin/R
-ln -s /opt/R/\${R_VERSION}/bin/Rscript /usr/local/bin/Rscript
+    # ── R ─────────────────────────────────────
+    curl -fsSL -O https://cdn.rstudio.com/r/centos-8/pkgs/R-\${R_VERSION}-1-1.x86_64.rpm
+    dnf install -y R-\${R_VERSION}-1-1.x86_64.rpm
+    rm -f R-\${R_VERSION}-1-1.x86_64.rpm
 
-# Add a default CRAN mirror
-echo "options(repos = c(CRAN = 'https://cran.rstudio.com/'), download.file.method = 'libcurl')" >> /opt/R/\${R_VERSION}/lib/R/etc/Rprofile.site
+    ln -s /opt/R/\${R_VERSION}/bin/R       /usr/local/bin/R
+    ln -s /opt/R/\${R_VERSION}/bin/Rscript /usr/local/bin/Rscript
 
-# Add Timezone to R Site Environment File
-echo "TZ='$TZ'" >> /opt/R/\${R_VERSION}/lib/R/etc/Renviron
+    # ── R site config ─────────────────────────
+    echo "
+# CRAN snapshot compatible with Bioconductor \${BIOC_VERSION}
+options(repos = c(CRAN = '\${PPM}/cran/__linux__/centos8/latest'))
 
-# Adjust Platform and Libs (update on R or OS version change!!)
-sed -i '/^R_PLATFORM=/ c\\R_PLATFORM=\\$\\{R_PLATFORM-"el8-x86_64-singularity"\\}' /opt/R/\${R_VERSION}/lib/R/etc/Renviron
-sed -i '/^R_LIBS_USER=/ c\\R_LIBS_USER=\\$\\{R_LIBS_USER-"~/R/el8-x86_64-singularity-library/${(activeData.rVersion || "4.4").split(".").slice(0, 2).join(".")}"\\}' /opt/R/\${R_VERSION}/lib/R/etc/Renviron
+# BiocManager — use Posit Package Manager as mirror
+options(BioC_mirror = '\${PPM}/bioconductor/latest')
+options(BIOCONDUCTOR_CONFIG_FILE = '\${PPM}/bioconductor/latest/config.yaml')
 
-# Install R devtools
-R -e "install.packages('devtools')"
+# Lock Bioconductor version
+Sys.setenv(R_BIOC_VERSION = '\${BIOC_VERSION}')
 
-# Install R Studio Server
-RSTUDIO_VERSION=${activeData.rstudioVersion}
-curl -O https://download2.rstudio.org/server/rhel8/x86_64/rstudio-server-rhel-\${RSTUDIO_VERSION}-x86_64.rpm
-dnf install -y rstudio-server-rhel-\${RSTUDIO_VERSION}-x86_64.rpm
-rm -f rstudio-server-rhel-\${RSTUDIO_VERSION}-x86_64.rpm
+    " >> \${R_ETC}/Rprofile.site
 
-# Node JS and Core Dependencies
-dnf module enable -y nodejs:22
-dnf install -y wget nodejs nodejs-devel npm openblas java-1.8.0-openjdk-devel zlib-devel libicu-devel libpng-devel libcurl-devel libxml2-devel openssl-devel openmpi-devel python3-numpy python3-matplotlib netcdf4-python3 netcdf-devel netcdf python3-pandas python3-basemap proj-devel gdal-devel monitorix gnuplot ImageMagick librsvg2-devel libsodium-devel libwebp-devel cairo-devel hunspell-devel openssl-devel poppler-cpp-devel protobuf-devel mariadb-devel redland-devel cyrus-sasl-devel libtiff-devel tcl-devel tk-devel xauth mesa-libGLU-devel glpk-devel libXt-devel gsl-devel fftw-devel bzip2-devel geos-devel gtk2-devel gtk3-devel libjpeg-turbo-devel blas-devel lapack-devel mpfr-devel unixODBC-devel libsndfile-devel udunits2-devel postgresql-devel libRmath-devel qt5-devel libdb-devel octave-devel hiredis-devel poppler-glib-devel boost-devel czmq-devel ImageMagick-c++-devel file-devel opencl-headers sqlite-devel
+    echo "TZ='Asia/Bangkok'" >> \${R_ETC}/Renviron
+    sed -i '/^R_PLATFORM=/ c\\R_PLATFORM=\${R_PLATFORM-"el8-x86_64-singularity"}'     \${R_ETC}/Renviron
+    sed -i '/^R_LIBS_USER=/ c\\R_LIBS_USER=\${R_LIBS_USER-"~/R/el8-x86_64-singularity-library/${rMajorMinor}"}' \\
+        \${R_ETC}/Renviron
 
-# Install V8
-echo "DOWNLOAD_STATIC_LIBV8='1'" >> /opt/R/\${R_VERSION}/lib/R/etc/Renviron
-R -e "Sys.setenv(DOWNLOAD_STATIC_LIBV8=1);install.packages('V8')"
+    # ── RStudio Server ────────────────────────
+    curl -fsSL -O https://download2.rstudio.org/server/rhel8/x86_64/rstudio-server-rhel-\${RSTUDIO_VERSION}-x86_64.rpm
+    dnf install -y rstudio-server-rhel-\${RSTUDIO_VERSION}-x86_64.rpm
+    rm -f rstudio-server-rhel-\${RSTUDIO_VERSION}-x86_64.rpm
+
+    # ── Node.js (required by RStudio Server) ──
+    dnf module enable -y nodejs:22
+    dnf install -y nodejs
 
 `;
     }
@@ -144,64 +162,90 @@ R -e "Sys.setenv(DOWNLOAD_STATIC_LIBV8=1);install.packages('V8')"
     // Dynamic OS Packages
     const validDnf = activeData.dnfPackages.filter(p => p.trim() !== "");
     if (validDnf.length > 0) {
-      post += `# Install Additional OS Packages\n`;
-      post += `dnf install -y ${validDnf.join(" ")}\n\n`;
+      post += `    # ── Additional OS Packages ────────────────\n`;
+      post += `    dnf install -y ${validDnf.join(" ")}\n\n`;
     }
 
     // Dynamic R Packages installation
     const validCran = activeData.cranPackages.filter(p => p.trim() !== "");
     const validBioc = activeData.biocPackages.filter(p => p.trim() !== "");
 
+    if (validCran.length > 0 || validBioc.length > 0 || activeData.installBiocManager) {
+      post += `    # ── R packages ────────────────────────────\n`;
+    }
+
     if (validCran.length > 0) {
-      post += `# Install CRAN Packages\n`;
       const cranStr = validCran.map(pkg => `'${pkg}'`).join(', ');
-      post += `R -e "install.packages(c(${cranStr}), dependencies = TRUE)"\n\n`;
+      post += `    R -e "install.packages(c(${cranStr}), dependencies = TRUE)"\n`;
+    }
+
+    if (activeData.installBiocManager) {
+      post += `    R -e "install.packages('BiocManager', dependencies = TRUE)"\n`;
+      post += `    R -e "BiocManager::install(ask = FALSE)"\n`;
     }
 
     if (validBioc.length > 0) {
-      post += `# Install Bioconductor Packages\n`;
-      // If installing Bioc packages, make sure BiocManager is present (especially for scratch installs)
-      if (tab === "scratch") {
-        post += `R -e "if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager')"\n`;
+      if (!activeData.installBiocManager) {
+        post += `    R -e "if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager')"\n`;
       }
       const biocStr = validBioc.map(pkg => `'${pkg}'`).join(', ');
-      post += `R -e "BiocManager::install(c(${biocStr}), ask=FALSE)"\n\n`;
+      post += `    R -e "BiocManager::install(c(${biocStr}), ask=FALSE)"\n`;
     }
 
-    post += `# cleanup dnf
-dnf clean all
-rm -rf /var/cache/dnf/*`;
+    if (validCran.length > 0 || validBioc.length > 0 || activeData.installBiocManager) {
+      post += `\n`;
+    }
+
+    post += `    # ── Cleanup ───────────────────────────────
+    dnf clean all
+    rm -rf /var/cache/dnf/*`;
 
     return post;
   };
 
 
   const generateDef = () => {
-    let def = `BootStrap: ${activeData.bootstrap}\n`;
-    def += `From: ${activeData.from}\n\n`;
-    
+    let def = `BootStrap: ${activeData.bootstrap}\nFrom: ${activeData.from}\n`;
+
+    // Labels section (only for scratch with version info)
+    if (tab === "scratch" && (activeData.rVersion || activeData.biocVersion || activeData.rstudioVersion)) {
+      def += `\n# ──────────────────────────────────────────────\n`;
+      def += `# Versions (update here only)\n`;
+      def += `# ──────────────────────────────────────────────\n`;
+      def += `%labels\n`;
+      if (activeData.rVersion) {
+        def += `    R_VERSION          ${activeData.rVersion}\n`;
+      }
+      if (activeData.biocVersion) {
+        def += `    BIOC_VERSION       ${activeData.biocVersion}\n`;
+      }
+      if (activeData.rstudioVersion) {
+        def += `    RSTUDIO_VERSION    ${activeData.rstudioVersion}\n`;
+      }
+    }
+
     if (activeData.environment) {
-        def += `%environment\n`;
-        def += `${activeData.environment}\n\n`;
+      def += `\n%environment\n`;
+      def += `${activeData.environment}\n`;
     }
 
     const postContent = generatePost();
     if (postContent) {
-        def += `%post\n`;
-        def += `${postContent}\n\n`;
+      def += `\n%post\n`;
+      def += `${postContent}\n`;
     }
 
     if (activeData.runscript) {
-        def += `%runscript\n`;
-        def += `${activeData.runscript}\n\n`;
+      def += `\n%runscript\n`;
+      def += `${activeData.runscript}\n`;
     }
 
     if (activeData.test) {
-        def += `%test\n`;
-        def += `${activeData.test}\n`;
+      def += `\n%test\n`;
+      def += `${activeData.test}\n`;
     }
 
-    return def.trim();
+    return def.trimEnd() + "\n";
   };
 
   const generatedDef = generateDef();
@@ -249,7 +293,7 @@ rm -rf /var/cache/dnf/*`;
           <h3 style={{ marginTop: 0 }}>Definition Configuration</h3>
           
           <div style={{ padding: "12px", background: "var(--ifm-color-emphasis-100)", borderRadius: "4px", marginBottom: "16px" }}>
-            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>1. Header Session</h4>
+            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>1. Header</h4>
             
             <label style={labelStyle}>Fetch Base (BootStrap)</label>
             <select style={inputStyle} name="bootstrap" value={activeData.bootstrap} onChange={handleChange}>
@@ -263,11 +307,33 @@ rm -rf /var/cache/dnf/*`;
             <input style={inputStyle} type="text" name="from" value={activeData.from} onChange={handleChange} placeholder="e.g. quay.io/rockylinux/rockylinux:8.10" />
           </div>
 
+          {tab === "scratch" && (
+            <div style={{ padding: "12px", background: "var(--ifm-color-emphasis-100)", borderRadius: "4px", marginBottom: "16px" }}>
+              <h4 style={{ marginTop: 0, marginBottom: "16px" }}>2. Versions (%labels)</h4>
+              <label style={{...labelStyle, fontWeight: "normal", fontSize: "13px", color: "var(--ifm-color-emphasis-700)"}}>Version metadata stored in the container image labels.</label>
+              
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 120px" }}>
+                  <label style={labelStyle}>R Version</label>
+                  <input style={inputStyle} type="text" name="rVersion" value={activeData.rVersion} onChange={handleChange} placeholder="e.g. 4.5.2" />
+                </div>
+                <div style={{ flex: "1 1 120px" }}>
+                  <label style={labelStyle}>Bioconductor Version</label>
+                  <input style={inputStyle} type="text" name="biocVersion" value={activeData.biocVersion} onChange={handleChange} placeholder="e.g. 3.22" />
+                </div>
+                <div style={{ flex: "1 1 180px" }}>
+                  <label style={labelStyle}>RStudio Version</label>
+                  <input style={inputStyle} type="text" name="rstudioVersion" value={activeData.rstudioVersion} onChange={handleChange} placeholder="e.g. 2026.01.1-403" />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div style={{ padding: "12px", background: "var(--ifm-color-emphasis-100)", borderRadius: "4px", marginBottom: "16px" }}>
-            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>2. Environment Variables</h4>
-            <label style={{...labelStyle, fontWeight: "normal", fontSize: "13px", color: "var(--ifm-color-emphasis-700)"}}>Defines environment variables inside '%environment' block.</label>
+            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>{tab === "scratch" ? "3" : "2"}. Environment Variables (%environment)</h4>
+            <label style={{...labelStyle, fontWeight: "normal", fontSize: "13px", color: "var(--ifm-color-emphasis-700)"}}>Defines environment variables available at runtime.</label>
             <textarea 
-              style={{ ...inputStyle, fontFamily: "monospace", height: "150px", resize: "vertical" }} 
+              style={{ ...inputStyle, fontFamily: "monospace", height: "130px", resize: "vertical" }} 
               name="environment" 
               value={activeData.environment} 
               onChange={handleChange}
@@ -275,9 +341,9 @@ rm -rf /var/cache/dnf/*`;
           </div>
 
           <div style={{ padding: "12px", background: "var(--ifm-color-emphasis-100)", borderRadius: "4px", marginBottom: "16px" }}>
-            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>3.1 OS System Setup and Configuration (%post)</h4>
+            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>{tab === "scratch" ? "4.1" : "3.1"} Additional OS Packages (%post)</h4>
             
-            <label style={labelStyle}>Additional OS Packages (dnf install -y)</label>
+            <label style={labelStyle}>Extra OS Packages (dnf install -y)</label>
             {activeData.dnfPackages.map((pkg, idx) => (
               <div key={`dnf_${idx}`} style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
                 <input style={{...inputStyle, marginBottom: 0}} type="text" value={pkg} onChange={(e) => handlePackageChange('dnfPackages', idx, e.target.value)} placeholder="e.g. htop or git" />
@@ -288,21 +354,8 @@ rm -rf /var/cache/dnf/*`;
           </div>
 
           <div style={{ padding: "12px", background: "var(--ifm-color-emphasis-100)", borderRadius: "4px", marginBottom: "16px" }}>
-            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>3.2 R & RStudio Setup</h4>
+            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>{tab === "scratch" ? "4.2" : "3.2"} R Packages (%post)</h4>
             
-            {tab === "scratch" && (
-              <div style={{ display: "flex", gap: "10px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>R Version</label>
-                  <input style={inputStyle} type="text" name="rVersion" value={activeData.rVersion} onChange={handleChange} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>RStudio Version</label>
-                  <input style={inputStyle} type="text" name="rstudioVersion" value={activeData.rstudioVersion} onChange={handleChange} />
-                </div>
-              </div>
-            )}
-
             <label style={labelStyle}>CRAN Packages (install.packages)</label>
             {activeData.cranPackages.map((pkg, idx) => (
               <div key={`cran_${idx}`} style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
@@ -311,6 +364,11 @@ rm -rf /var/cache/dnf/*`;
               </div>
             ))}
             <button onClick={() => addPackage('cranPackages')} style={{ display: "block", background: "var(--ifm-color-emphasis-200)", color: "inherit", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px", fontWeight: "bold", marginBottom: "20px" }}>+ Add CRAN Package</button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+              <input type="checkbox" id="installBiocManager" name="installBiocManager" checked={activeData.installBiocManager} onChange={handleChange} style={{ width: "auto", margin: 0 }} />
+              <label htmlFor="installBiocManager" style={{ ...labelStyle, marginBottom: 0, cursor: "pointer" }}>Install BiocManager + bootstrap Bioconductor</label>
+            </div>
 
             <label style={labelStyle}>Bioconductor Packages (BiocManager::install)</label>
             {activeData.biocPackages.map((pkg, idx) => (
@@ -323,7 +381,7 @@ rm -rf /var/cache/dnf/*`;
           </div>
 
           <div style={{ padding: "12px", background: "var(--ifm-color-emphasis-100)", borderRadius: "4px", marginBottom: "16px" }}>
-            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>4. Container Execution (%runscript)</h4>
+            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>{tab === "scratch" ? "5" : "4"}. Container Execution (%runscript)</h4>
             <label style={{...labelStyle, fontWeight: "normal", fontSize: "13px", color: "var(--ifm-color-emphasis-700)"}}>Defines the default action when the container is executed.</label>
             <textarea 
               style={{ ...inputStyle, fontFamily: "monospace", height: "80px", resize: "vertical", marginBottom: 0 }} 
@@ -334,10 +392,10 @@ rm -rf /var/cache/dnf/*`;
           </div>
 
           <div style={{ padding: "12px", background: "var(--ifm-color-emphasis-100)", borderRadius: "4px", marginBottom: "16px" }}>
-            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>5. Integrity Check (%test)</h4>
+            <h4 style={{ marginTop: 0, marginBottom: "16px" }}>{tab === "scratch" ? "6" : "5"}. Integrity Check (%test)</h4>
             <label style={{...labelStyle, fontWeight: "normal", fontSize: "13px", color: "var(--ifm-color-emphasis-700)"}}>Verify the container's integrity at the end of the build process.</label>
             <textarea 
-              style={{ ...inputStyle, fontFamily: "monospace", height: "100px", resize: "vertical", marginBottom: 0 }} 
+              style={{ ...inputStyle, fontFamily: "monospace", height: "120px", resize: "vertical", marginBottom: 0 }} 
               name="test" 
               value={activeData.test} 
               onChange={handleChange}
@@ -349,7 +407,7 @@ rm -rf /var/cache/dnf/*`;
         {/* RIGHT PANEL: SCRIPT PREVIEW */}
         <div style={{ flex: "1 1 400px", minWidth: 0, display: "flex", flexDirection: "column"}}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-            <h3 style={{ margin: 0 }}>Definition Preveiw (.def)</h3>
+            <h3 style={{ margin: 0 }}>Definition Preview (.def)</h3>
             <div>
               <button 
                 onClick={handleCopy} 
