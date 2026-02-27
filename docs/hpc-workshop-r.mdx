@@ -1,0 +1,503 @@
+---
+sidebar_position: 4
+title: Get Started R on HPC Workshop
+---
+import EmailAccessPage from '@site/src/components/GetCred'; 
+
+# R Programming and Its Applications in HPC for Clinical Researchers
+
+This workshop guide walks you through using **R** on the **MedCMU-HPC (Raptor)** cluster — from your first login to submitting batch and array jobs. Each section builds on the previous one, so follow along in order for the best experience.
+
+---
+
+## 1. Getting Started with HPC
+
+> In this section, you will learn what HPC is, how the MedCMU-HPC cluster is organized, and how to get access.
+
+### 1.1 Workshop Resources
+
+| Resource | Link |
+|---|---|
+| Workshop website | [cmu.to/hpc-workshop-r](https://cmu.to/hpc-workshop-r) |
+| Presentation Slide | [PowerPoint](https://o365cmu-my.sharepoint.com/:p:/g/personal/nattawet_sri_cmu_ac_th/IQCIFotF2RU6S5IDXg2smiRvAUeaGNpKPzTK4eTVMoybdvg?e=zW4w3D) |
+| Cheat Sheet | [cmu.to/medcmu-hpc-cheatsheet](https://cmu.to/medcmu-hpc-cheatsheet) |
+| Required Software | Web Browser |
+
+### 1.2 What is High-Performance Computing (HPC)?
+
+HPC refers to powerful computing systems designed to solve complex computational problems that require massive processing power — far beyond what a typical desktop or laptop can provide.
+
+![What is HPC?](/img/workshop-r/what-is-hpc.png)
+
+#### HPC in Action: Medical Research
+- **Accelerating Drug Discovery** — Simulating complex molecular interactions (e.g., AlphaFold2) to drastically reduce drug development timelines.
+- **AI-Driven Healthcare** — Powering AI models that analyze medical imaging (e.g., X-ray heatmaps) for faster, more accurate diagnosis.
+- **Large-Scale Omics Analysis** — Processing massive biological datasets such as genomes, proteomes, and metabolomes.
+
+#### Understanding an HPC Cluster
+
+![HPC Cluster](/img/workshop-r/hpc-cluster.png)
+
+An **HPC cluster** is made up of many individual computers called **nodes**. Each node has its own CPU, memory, local storage, and network interface. All nodes share fast storage volumes (`/scratch` and `/project`) and are managed by a job scheduler called **SLURM** from the **login node**.
+
+### 1.3 MedCMU-HPC Cluster Overview
+
+The **Raptor** cluster empowers medical research with scalable computing for **Omics** and **AI** workloads.
+
+![RAPTOR cluster overview](/img/workshop-r/raptor-cluster-overview.png)
+
+#### Cluster Partitions
+
+The cluster is organized into **partitions** — groups of nodes reserved for specific purposes:
+
+| Partition   | Total Cores | Cores per Node | Memory per Node | GPU per Node    | Max Time per Job | Max Cores per User |
+|-------------|-------------|----------------|-----------------|-----------------|------------------|--------------------|
+| **short**   |             | 1              | 8 GB            | -               | 8 hours          | 2                  |
+| **compute** | 384         | 94             | 1,280 GB        | -               | -                | 188                |
+| **gpu**     | 188         | 94             | 384 GB          | 2 × Nvidia H100 | -                | 188                |
+
+:::tip When to use each partition
+- **short** — Quick tests, interactive sessions, and array jobs (default: 4 GB/core).
+- **compute** — Large multi-node or long-running jobs.
+- **gpu** — GPU-accelerated workloads (deep learning, molecular simulation).
+:::
+
+### 1.4 How to Register for MedCMU-HPC
+
+1. Visit the registration portal: [cmu.to/medcmu-hpc](https://cmu.to/medcmu-hpc)
+2. Choose the appropriate form:
+   - [**Project Registration**](https://cmu.to/medcmu-hpc-proj-register) — For PIs or graduate students.
+   - [**User Registration**](https://cmu.to/medcmu-hpc-user-register) — For individual user accounts.
+3. Submit required documents and wait for approval.
+
+### 1.5 HPC Quota Allocation and Usage
+
+![Quota](/img/workshop/quota.png)
+
+Each approved project and user receives the following allocations:
+
+| Resource | Allocation | Path |
+|---|---|---|
+| Project storage | 1 TB (+ 1 TB flash scratch) | `/project/<ProjectID>`, `/scratch/<ProjectID>` |
+| Computing hours | 198 Service Hours (SHr) | — |
+| User home | 100 GB | `/home/<username>` |
+
+:::warning Important
+- `/scratch` is **automatically cleared 30 days** after creation. Move your data out promptly.
+- Inactive accounts (no login for 1 year) are removed after 60, 14, and 1 day warnings.
+:::
+
+### 1.6 Approved HPC Allocation Email
+
+After approval, you will receive:
+- **PIs and collaborators** — "Approved Project Allocation and Inform Project Directory on MedCMU HPC"
+- **Individual users** — "MedCMU-HPC Access Detail (Raptor Cluster)"
+
+---
+
+## 2. Open OnDemand: Web-Based HPC Portal
+
+> Open OnDemand lets you access the HPC cluster entirely through your web browser — no terminal needed for basic tasks like launching RStudio, transferring files, and monitoring jobs.
+
+### 2.1 Workshop Login Credential
+
+Enter your registered email below to retrieve your temporary workshop credentials:
+
+<EmailAccessPage />
+
+### 2.2 Launching RStudio on OnDemand
+
+Follow these steps to start an RStudio session on the cluster:
+
+1. Open your browser and go to **[https://raptor.med.cmu.ac.th:9000](https://raptor.med.cmu.ac.th:9000)**
+2. Log in with your HPC credentials.
+3. Navigate to **"Interactive Apps"** → **"RStudio"**.
+4. Configure your session resources:
+   - **Project account** — Your assigned project ID
+   - **Partition** — `short`, `compute`, or `gpu`
+   - **Time limit** — Maximum duration of the session
+   - **CPU cores** — Number of cores per task
+   - **Memory** — Amount of RAM
+   - **R module version** — Select the R version you need
+5. Click **"Launch"**, then connect to RStudio when it is ready.
+6. **Close the session** when you are finished to free up resources for others.
+
+![RStudio on OnDemand](/img/workshop-r/rstudio-ondemand.png)
+
+### 2.3 File Transfer via OnDemand
+
+You can upload and download files directly from the browser. Click **"Files"** in the top navigation bar.
+
+![File Transfer](/img/workshop-r/file-transfer.png)
+
+#### Data Upload Policy
+:::danger Data Policy — Read Before Uploading
+1. **Do not** store individually identifiable data (HN, names, addresses, birthdates, medical history) on the HPC system.
+2. All data must be **de-identified or sample coded** before upload.
+:::
+
+![Anonymization technique](/img/workshop/anonymization.png)
+
+---
+
+## 3. Basic Linux Command Line
+
+> While OnDemand provides a graphical interface, many HPC tasks require the **command line**. This section introduces how to connect and use essential Linux commands.
+
+### 3.1 Accessing the HPC Terminal
+
+**Option A: OnDemand Shell** — Click **"Clusters"** → **"Raptor Cluster Shell Access"** in the OnDemand navigation bar.
+
+![Terminal OnDemand](/img/workshop-r/terminal-ondemand.png)
+
+**Option B: SSH from your computer**
+
+![ssh](/img/workshop/ssh-login.png)
+
+```bash
+ssh username@raptor.med.cmu.ac.th
+```
+
+- Enter your initial password.
+- On first login, you will be prompted to reset your password. Enter your **initial password** once more, then type your **new password** twice.
+
+### 3.2 Understanding the Command Line Interface
+
+The command line is how you interact with the HPC system. Every command follows the pattern: `command [options] [arguments]`.
+
+![SSH componenet](/img/workshop/ssh-explain.png)
+
+#### Alternative: Connect via VS Code (SSH FS)
+
+1. Install [VS Code](https://code.visualstudio.com/download)
+2. Install the **[SSH FS](https://marketplace.visualstudio.com/items?itemName=Kelvin.vscode-sshfs)** extension
+3. Configure the connection:
+   - **Name**: `raptor`
+   - **Host**: `raptor.med.cmu.ac.th`
+   - **User**: `username`
+   - **Password**: `your password`
+   - **Root**: `/home/username` or `/project/proj_id`
+4. Add as a workspace folder
+
+![SSH FS](/img/workshop/ssh-fs.png)
+
+### 3.3 & 3.4 Basic Linux Commands
+
+Practice with the [interactive CLI tutorial](Tools/interactive-cli-tutorial)
+
+### 3.5 `ls`: Listing the Contents of a Folder
+
+The `ls` command is one of the most frequently used commands. It shows the files and folders in the current directory.
+
+![ls](/img/workshop-r/ls.png)
+
+### 3.6 Tracking Remaining Project Resources
+
+Use these built-in commands to monitor your remaining compute time and storage:
+
+**Check remaining compute hours:**
+```bash
+sbalance
+```
+```text title="Example output"
+Account    Descr   Remaining(%)  Allocation(SHr)        Used(SHr)   Remaining(SHr)
+----------------------------------------------------------------------------------
+a25000X    ProjA       100.00%           100.00             0.00           100.00
+a2500XX    ProjB        99.98%           100.00             0.02            99.98
+o250XXX    ProjC        99.00%           100.00             1.00            99.00
+```
+
+Service Hours (SHr) are calculated as:
+
+$$
+SHr = \frac{Cores \times Hours}{Total\ Cores\ per\ Node}
+$$
+
+| Example | CPU (cores) | Running Time (h) | SHr Used |
+|---------|-------------|-------------------|----------|
+| User B1 | 1           | 2                 | $\frac{1 \times 2}{94} = 0.02$ |
+| User C3 | 94          | 1                 | $\frac{94 \times 1}{94} = 1.00$ |
+
+**Check remaining storage:**
+```bash
+myquota
+```
+```text title="Example output"
+              Path  Remaining(%)  Allocation(GB)  Used(GB)  Remaining(GB)
+  /project/o25000X            57            5000      2158           2842
+  /scratch/o25000X            69            1000       313            687
+     /project/demo           100            1000         0           1000
+     /scratch/demo            94            1000        58            942
+    /home/username            43             100        57             43
+```
+
+### 3.7 Loading Software with Environment Modules
+
+HPC systems use **Environment Modules** to manage software. This avoids version conflicts and keeps your environment clean.
+
+#### Quick Reference
+
+| Command | Short Form | Action |
+|---|---|---|
+| `module avail` | `ml av` | List all available software |
+| `module load <name>` | `ml <name>` | Load a software module |
+| `module list` | `ml` | Show currently loaded modules |
+| `module unload <name>` | `ml -<name>` | Unload a specific module |
+| `module purge` | `ml purge` | Unload all modules |
+
+#### 🔎 Example: List available R modules
+```bash
+module avail r/
+```
+```text title="Example output"
+-------------- /apps/.modulefiles ---------------------------------------------------------------
+   r/4.3.2-RStudio2025.05.1-513-MetaboAnalystR
+   r/4.4.2-RStudio_Server-VSCode-Jupyter-SIF
+   r/4.4.2-RStudio2024.12.1
+   r/4.4.2-VIM-SIF
+   r/4.4.3-RStudio2024.12.1
+   r/4.5.0-RStudio2025.05.0-496-uRF
+   r/4.5.1-RStudio_Server_2025.05.1-513_1-ComplexHeatmap
+   r/4.5.1-RStudio_Server_2025.05.1-513
+   r/4.5.2-RStudio_Server_2025.09.2-418-Masslin2         (D)
+```
+
+#### 📥 Load and verify a module
+```bash
+module load r
+module list
+```
+
+#### 🔄 Reset your environment
+```bash
+module purge
+```
+
+### 3.8 Running R via Apptainer Container
+
+**Apptainer** (formerly Singularity) is a container platform for HPC. It lets you run pre-packaged R environments with all dependencies included — ensuring reproducibility across different systems.
+
+![R Container](/img/workshop-r/apptainer.png)
+
+#### Try it: Launch R in a container on the login node
+```bash
+module load apptainer
+module load r
+
+echo $SIF              # shows the path to the R container image
+
+apptainer exec $SIF R  # launches R inside the container
+```
+To exit R, type `q()` and press Enter.
+
+---
+
+## 4. Submitting Jobs with SLURM (Basic)
+
+> On an HPC cluster, you don't run programs directly — you **submit jobs** to the SLURM scheduler, which queues and allocates resources for you. This section covers interactive jobs and basic batch scripts.
+
+### 4.1 Interactive Jobs
+
+Interactive jobs give you a shell on a compute node in real time. This is useful for testing and debugging.
+
+```bash
+# Basic interactive session (4 GB memory)
+srun --mem=4G --pty bash
+```
+```bash
+# With specific partition, time limit, cores, and memory
+srun -p short -t 1:00:00 -c 1 --mem=4G --pty bash
+```
+
+**Run an R script interactively on a compute node:**
+```bash
+srun -p short -t 1:00:00 -c 1 --mem=4G --pty \
+   Rscript /common/demo/mean_score.r 1 2 3 4 5
+```
+
+:::info Time limit format
+Wall time is specified as `d-hh:mm:ss` — for example, `1:00:00` = 1 hour, `1-00:00:00` = 1 day.
+:::
+
+### 4.2 How SLURM Batch Jobs Work
+
+For longer or unattended jobs, you write a **batch script** and submit it with `sbatch`. SLURM handles the rest automatically.
+
+![SLURM submit process](/img/workshop/slurm-submit.png)
+
+1. **Log in** to the cluster via SSH
+2. **Write a script** specifying cores, memory, time, and your program
+3. **Submit** the script — SLURM adds it to the job queue
+4. **SLURM allocates** resources when available and runs your job
+5. **Output is saved** to log files when the job completes
+
+### 4.3 Your First SLURM Batch Script
+
+Create a file called `1_MeanScore_script.sh`:
+
+```bash title="1_MeanScore_script.sh"
+#!/bin/bash
+
+#SBATCH --job-name=MeanScore
+#SBATCH --account=w260001
+#SBATCH --partition=short
+#SBATCH --time=1:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=4G
+#SBATCH --output=1_MeanScore_%j.out
+#SBATCH --error=1_MeanScore_%j.err
+
+module load R
+Rscript /common/demo/mean_score.r 1 2 3 4 5
+```
+
+Submit it:
+```bash
+sbatch 1_MeanScore_script.sh
+```
+
+:::tip
+Use the [interactive SLURM Script Generator](Tools/slurm-generator) to create batch scripts without memorizing the syntax.
+:::
+
+### 4.4 Monitoring Job Status
+
+Once a job is submitted, use these commands to track its progress:
+
+| Command | Description |
+|---|---|
+| `squeue` | Show all queued and running jobs |
+| `squeue -u $USER` | Show only your jobs |
+| `watch squeue -u $USER` | Auto-refresh your job queue every 2 seconds |
+| `scancel <JobID>` | Cancel a job |
+| `sacct` | View completed jobs |
+| `seff <JobID>` | Check resource efficiency of a finished job |
+| `sinfo` | View node availability |
+
+**Example — `squeue`:**
+```text
+            JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+            8805   compute BileFAST songphon  R    3:33:44      1 raptor-m-001
+            8807     short    sleep nattawet  R       0:07      1 raptor-g-001
+```
+
+**Example — `seff 6000` (resource efficiency):**
+```text
+Job ID: 6000
+Cluster: raptor
+State: FAILED (exit code 1)
+Nodes: 1
+Cores per node: 2
+CPU Utilized: 00:04:25
+CPU Efficiency: 50.19% of 00:08:48 core-walltime
+Memory Utilized: 230.55 MB
+Memory Efficiency: 1.41% of 16.00 GB
+```
+
+**Example — `sinfo` (node status):**
+```text
+PARTITION AVAIL  TIMELIMIT  NODES  STATE NODELIST
+short*       up    8:00:00      1    mix raptor-m-001
+short*       up    8:00:00      5   idle raptor-g-[001-002],raptor-m-[002-004]
+compute      up   infinite      1    mix raptor-m-001
+compute      up   infinite      3   idle raptor-m-[002-004]
+gpu          up   infinite      2   idle raptor-g-[001-002]
+```
+
+| Node State | Meaning |
+|---|---|
+| **idle** | Available for scheduling |
+| **allocated** | Fully occupied by running jobs |
+| **mix** | Partially occupied — some resources available |
+| **drain** | Unavailable (maintenance) |
+
+---
+
+## 5. Working with R Containers on Compute Nodes
+
+> In Section 3.8, you ran R in a container on the login node. Here, you will run R containers on **compute nodes** via SLURM for real workloads.
+
+### 5.1 Interactive R Container on a Compute Node
+
+```bash
+srun --mem=4G --pty apptainer exec $SIF R
+```
+
+### 5.2 Batch Script with R Container
+
+Create a file called `2_MeanScore_script_rcontainer.sh`:
+
+```bash title="2_MeanScore_script_rcontainer.sh"
+#!/bin/bash
+
+#SBATCH --job-name=MeanScore_R
+#SBATCH --account=w260001
+#SBATCH --partition=short
+#SBATCH --time=1:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+#SBATCH --output=2_MeanScore_%j.out
+#SBATCH --error=2_MeanScore_%j.err
+
+module load apptainer
+module load r
+
+apptainer exec $SIF \
+   Rscript /common/demo/mean_score.r 1 2 3 4 5
+```
+
+Submit it:
+```bash
+sbatch 2_MeanScore_script_rcontainer.sh
+```
+
+---
+
+## 6. Advanced SLURM: Array Jobs
+
+> When you need to run the **same script with different inputs** (e.g., processing multiple datasets), **array jobs** let you submit them all at once. SLURM automatically manages parallelism and resource allocation.
+
+![SLURM Array Job](/img/workshop-r/array-job.png)
+
+### 6.1 How Array Jobs Work
+
+An array job creates multiple sub-tasks from a single script. Each sub-task receives a unique index via `$SLURM_ARRAY_TASK_ID`, which you use to select different inputs.
+
+### 6.2 Example: Array Job with R
+
+```bash title="3_MeanScore_script_array.sh"
+#!/bin/bash
+
+#SBATCH --job-name=MeanScore_Array
+#SBATCH --account=w260001
+#SBATCH --partition=short
+#SBATCH --time=1:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+#SBATCH --output=3_MeanScore_array_%A_%a.out
+#SBATCH --error=3_MeanScore_array_%A_%a.err
+#SBATCH --array=0-2
+
+# Define different inputs for each array task
+datasets=("10 20 30" "40 50 60" "70 80 90")
+
+INPUT_ARGS=${datasets[$SLURM_ARRAY_TASK_ID]}
+
+module load apptainer r
+
+echo "Task $SLURM_ARRAY_TASK_ID: Processing $INPUT_ARGS on $(hostname)"
+apptainer exec $SIF Rscript /common/demo/mean_score.r $INPUT_ARGS
+```
+
+Submit it:
+```bash
+sbatch 3_MeanScore_script_array.sh
+```
+
+This creates **3 sub-tasks** (indices 0, 1, 2), each computing the mean of a different set of numbers. Output files are named with both the job ID (`%A`) and the array index (`%a`) for easy identification.
+
+:::tip Array job notation
+- `--array=0-9` — 10 tasks (indices 0 through 9)
+- `--array=0-9%2` — 10 tasks, but only 2 run at a time
+- `--array=1,3,5,7` — 4 specific tasks
+:::
