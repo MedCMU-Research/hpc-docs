@@ -3,6 +3,8 @@ sidebar_position: 4
 title: Get Started R on HPC Workshop
 ---
 import EmailAccessPage from '@site/src/components/GetCred'; 
+import InteractiveCli from '@site/src/components/InteractiveCli';
+import CommandTable from '@site/src/components/CommandTable';
 
 # R Programming and Its Applications in HPC for Clinical Researchers
 
@@ -183,7 +185,11 @@ The command line is how you interact with the HPC system. Every command follows 
 
 ### 3.3 & 3.4 Basic Linux Commands
 
-Practice with the [interactive CLI tutorial](Tools/interactive-cli-tutorial)
+<CommandTable />
+
+Practice your command line skills directly in the browser! Complete the missions by typing the correct command (like `ls`, `cd`, `pwd`, `mkdir`) and pressing Enter.
+
+<InteractiveCli />
 
 ### 3.5 `ls`: Listing the Contents of a Folder
 
@@ -531,7 +537,7 @@ The script uses `tidyverse` to parse dates, calculate BMI, classify the generati
 cat process_bmi.R
 ```
 
-```r
+```r title="process_bmi.R snippet"
 # process_bmi.R snippet
 args <- commandArgs(trailingOnly = TRUE)
 input_file <- args[1]
@@ -628,7 +634,7 @@ Now that the heavy lifting is done by the HPC compute nodes locally mapping the 
 3. In RStudio, open a **New R Markdown (`.Rmd`) Document**.
 4. In the R Markdown file, execute the following script to aggregate the SLURM outputs and formulate behavioral strategies!
 
-```r
+```r title="analyze_strategies.Rmd"
 library(tidyverse)
 library(ggplot2)
 

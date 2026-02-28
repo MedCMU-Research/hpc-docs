@@ -91,28 +91,17 @@ export default function InteractiveCli() {
   const [commandHistory, setCommandHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const inputRef = useRef(null);
-  const chatEndRef = useRef(null);
+  const terminalRef = useRef(null);
 
   const lesson = lessons[activeLesson];
   const stepData = lesson.steps[currentStep];
 
   useEffect(() => {
-    // Scroll to bottom whenever history updates
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    // Scroll to bottom whenever history updates without modifying window's scroll
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [history]);
-
-  useEffect(() => {
-    // Focus the terminal input when clicking anywhere on the terminal window
-    const focusInput = () => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    };
-    document.addEventListener("click", focusInput);
-    return () => document.removeEventListener("click", focusInput);
-  }, []);
 
   const handleCommand = (e) => {
     if (e.key === "Tab") {
@@ -205,7 +194,7 @@ export default function InteractiveCli() {
   };
 
   const promptPath = (currentStep >= 2 && currentStep <= 7) ? "~/demo" : "~";
-  const prompt = `user@medcmu-hpc:${promptPath}$`;
+  const prompt = `user@raptor:${promptPath}$`;
 
   return (
     <div style={{ padding: "20px 0", maxWidth: "1000px" }} onClick={(e) => e.stopPropagation()}>
@@ -269,7 +258,7 @@ export default function InteractiveCli() {
 
         {/* RIGHT PANEL: TERMINAL */}
         <div style={{ flex: "1 1 450px", minWidth: 0 }}>
-          <div style={{ background: "#282c34", color: "#abb2bf", borderRadius: "8px", padding: "15px", fontFamily: "monospace", fontSize: "15px", minHeight: "400px", maxHeight: "500px", overflowY: "auto", boxShadow: "0 4px 6px rgba(0,0,0,0.3)" }} onClick={() => inputRef.current?.focus()}>
+          <div ref={terminalRef} style={{ background: "#282c34", color: "#abb2bf", borderRadius: "8px", padding: "15px", fontFamily: "monospace", fontSize: "15px", minHeight: "400px", maxHeight: "500px", overflowY: "auto", boxShadow: "0 4px 6px rgba(0,0,0,0.3)" }} onClick={() => inputRef.current?.focus()}>
             
             <div style={{ color: "#5c6370", marginBottom: "15px" }}>
               Welcome to the Interactive Linux Terminal.<br/>
@@ -314,13 +303,11 @@ export default function InteractiveCli() {
                     flex: 1,
                     width: "100%"
                   }}
-                  autoFocus
                   autoComplete="off"
                   spellCheck="false"
                 />
               </div>
             )}
-            <div ref={chatEndRef} />
           </div>
         </div>
       </div>
