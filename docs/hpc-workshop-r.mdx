@@ -501,3 +501,171 @@ This creates **3 sub-tasks** (indices 0, 1, 2), each computing the mean of a dif
 - `--array=0-9%2` — 10 tasks, but only 2 run at a time
 - `--array=1,3,5,7` — 4 specific tasks
 :::
+
+---
+
+## 7. Hands-on Practice: Precision Health Planning
+
+> **Scenario**: You are part of the national Precision Health steering committee. To design health interventions tailored for different provinces and generations (e.g., Baby Boomers vs. Gen Z), you need to analyze the obesity (BMI) distribution of over 700,000 citizens across 6 provinces.
+> The datasets are huge (over 100,000 records per province). You will use **SLURM Array Jobs** and the **tidyverse** package (inside an R container) to process them in parallel, then synthesize the results in an R Markdown document.
+
+### 7.1 Prepare the Workspace
+First, create a directory for this practice session and copy the provincial health records.
+
+```bash
+mkdir -p ~/bmi_practice
+cd ~/bmi_practice
+
+# Copy the practice datasets and R script
+cp -r /common/demo/clinical_data/* .
+
+# Verify the files are copied
+ls -l
+```
+*(You should see 6 large province datasets: `cohort_1.csv` to `cohort_6.csv`, and an R script `process_bmi.R`)*
+
+### 7.2 Understand the R Script
+The script uses `tidyverse` to parse dates, calculate BMI, classify the generation, and produce a summarized report. Let's look at the core mapping logic:
+
+```bash
+cat process_bmi.R
+```
+
+```r
+# process_bmi.R snippet
+args <- commandArgs(trailingOnly = TRUE)
+input_file <- args[1]
+output_file <- args[2]
+
+library(tidyverse)
+data <- read_csv(input_file, show_col_types = FALSE)
+
+# Calculate Age, classify Generation, and calculate Asian BMI cutoff
+data_processed <- data %>%
+  mutate(
+    BirthYear = as.numeric(substr(BirthDate, 1, 4)),
+    CaptureYear = as.numeric(substr(CaptureDate, 1, 4)),
+    Age = CaptureYear - BirthYear,
+    Generation = case_when(
+      BirthYear >= 1997 ~ "Gen Z",
+      BirthYear >= 1981 ~ "Gen Y",
+      BirthYear >= 1965 ~ "Gen X",
+      BirthYear >= 1946 ~ "Baby Boomer",
+      TRUE ~ "Silent Gen"
+    ),
+    BMI = WeightKg / (HeightCm/100)^2,
+    BMI_Category = case_when(
+      BMI < 18.5 ~ "Underweight",
+      BMI < 23.0 ~ "Normal",
+      BMI < 25.0 ~ "Overweight",
+      BMI < 30.0 ~ "Obese I",
+      TRUE ~ "Obese II"
+    )
+  )
+
+# Output only the summary statistics to save time and disk space!
+summary_stats <- data_processed %>%
+  group_by(Province, Generation, BMI_Category) %>%
+  summarise(Total = n(), Avg_Age = mean(Age), Avg_BMI = mean(BMI), .groups = "drop")
+
+write_csv(summary_stats, output_file)
+```
+
+### 7.3 Write the SLURM Array Job
+Create a batch script named `submit_bmi_analysis.sh` to run this R script on all 6 province files at once.
+
+```bash title="submit_bmi_analysis.sh"
+#!/bin/bash
+#SBATCH --job-name=PrecisionBMI
+#SBATCH --account=w260001
+#SBATCH --partition=short
+#SBATCH --time=00:30:00
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8G
+#SBATCH --output=logs/bmi_job_%A_%a.out
+#SBATCH --error=logs/bmi_job_%A_%a.err
+#SBATCH --array=1-6
+
+# Create logs directory
+mkdir -p logs
+
+# Dynamic input/output for each task ID
+INPUT_CSV="cohort_${SLURM_ARRAY_TASK_ID}.csv"
+SUMMARY_CSV="summary_province_${SLURM_ARRAY_TASK_ID}.csv"
+
+echo "Processing $INPUT_CSV on node $(hostname)"
+
+# Load modules
+module load apptainer r
+
+# Run the analyzer inside the reproducible container
+apptainer exec $SIF Rscript process_bmi.R $INPUT_CSV $SUMMARY_CSV
+
+echo "Successfully wrote summary to $SUMMARY_CSV"
+```
+
+### 7.4 Submit and Monitor
+Submit the array job to the SLURM scheduler:
+```bash
+sbatch submit_bmi_analysis.sh
+```
+
+Monitor your job queue:
+```bash
+watch squeue -u $USER
+```
+
+Once the jobs complete, check the results. You will see 6 new `summary_province_*.csv` files outlining the statistical spread!
+
+---
+
+### 7.5 Compile Strategies in RStudio (R Markdown)
+
+Now that the heavy lifting is done by the HPC compute nodes locally mapping the huge data, we can switch back to the web portal to aggregate the visual reports!
+
+1. Go back to OnDemand.
+2. Launch an **RStudio interactive session**.
+3. In RStudio, open a **New R Markdown (`.Rmd`) Document**.
+4. In the R Markdown file, execute the following script to aggregate the SLURM outputs and formulate behavioral strategies!
+
+```r
+library(tidyverse)
+library(ggplot2)
+
+# 1. Read all 6 summarized files into one combined dataset
+files <- list.files(path = "~/bmi_practice", pattern = "summary_province_.*\\.csv", full.names = TRUE)
+combined_stats <- map_dfr(files, read_csv, show_col_types = FALSE)
+
+# 2. Descriptive Statistics: Overall count by Province and Generation
+overview <- combined_stats %>%
+  group_by(Province, Generation) %>%
+  summarise(Total_Citizens = sum(Total),
+            Avg_BMI = weighted.mean(Avg_BMI, Total), 
+            .groups = "drop") %>%
+  arrange(desc(Total_Citizens))
+
+cat("\n--- Descriptive Statistics: Population Overview ---\n")
+print(head(overview, 10))
+
+# 3. Data Visualization: Obesity (Obese I & II) Distribution by Generation
+obesity_data <- combined_stats %>%
+  filter(BMI_Category %in% c("Obese I", "Obese II")) %>%
+  group_by(Province, Generation) %>%
+  summarise(Obese_Count = sum(Total), .groups = "drop")
+
+ggplot(obesity_data, aes(x = Generation, y = Obese_Count, fill = Province)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "Obesity Distribution by Generation and Province",
+       subtitle = "High-Risk Target Groups for Precision Interventions",
+       x = "Generation",
+       y = "Total Obese Citizens (Obese I & II)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 4. Precision Strategic Health Plans
+cat("\n========== STRATEGIC HEALTH PLANS ==========\n")
+cat("1. Baby Boomers (~Chiang Mai): Implement low-impact community exercise (e.g., Tai Chi) and diet clinics.\n")
+cat("2. Gen X (Widespread): Introduce workplace 'Active Office' campaigns and mandatory annual cholesterol/BMI screenings.\n")
+cat("3. Gen Z (~Bangkok): Focus on limiting screen time, mental health pairing, and app-based gamified fitness challenges.\n")
+```
+*(You've successfully handled massive raw data using HPC compute nodes, generated descriptive stats & figures, and synthesized the results using RStudio Web!)*
