@@ -1,5 +1,6 @@
 ---
-title: Instructor Guide: R on HPC Workshop
+title: Instructor Guide -- R on HPC Workshop
+draft: true
 ---
 
 ## Overview
