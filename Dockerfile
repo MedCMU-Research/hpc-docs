@@ -1,5 +1,5 @@
 # Stage 1: Build the Docusaurus site
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Create app directory and set correct permissions for node user
 RUN mkdir -p /app && chown -R node:node /app

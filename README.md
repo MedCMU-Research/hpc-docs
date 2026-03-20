@@ -65,10 +65,10 @@ npm run start
 ```
 
 **Option B: Docker Compose (Isolated Dev Environment)**
-Your `docker-compose.yml` includes an `hpc-docs-dev` service explicitly configured for isolated hot-reloading. You can spin it up with:
+A separate `docker-compose.dev.yml` is provided for isolated hot-reloading. You can spin it up with:
 
 ```bash
-docker compose up hpc-docs-dev
+docker compose -f docker-compose.dev.yml up
 ```
 
 Regardless of which option you pick, the site will instantly become accessible at `http://localhost:3000`.
