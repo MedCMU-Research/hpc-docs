@@ -38,7 +38,7 @@ To contribute or run the MedCMU HPC documentation locally, follow these steps:
 Clone the repository and install the standard Docusaurus dependencies:
 
 ```bash
-git clone https://github.com/evolu-tion/medcmu-hpc.git
+git clone https://github.com/MedCMU-Research/hpc-docs.git
 cd medcmu-hpc
 npm install
 ```
