@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
 
@@ -38,11 +38,12 @@ jobs:
 
     steps:
       # Fix Docusaurus cache permission issue before checkout
-      # Docker builds as root, so .docusaurus files need sudo to remove
+      # Docker builds create files as root, so use a Docker container to clean them
       - name: Clean workspace
-        run: sudo rm -rf .docusaurus || true
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/workspace" alpine sh -c "rm -rf /workspace/.docusaurus" || true
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build and Deploy with Docker Compose
         run: |
